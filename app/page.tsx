@@ -12,10 +12,20 @@ import {
 } from '@/lib/constants';
 
 // ============================================================================
+// MULTIPLAYER STATE
+// ============================================================================
+
+interface MultiplayerState {
+  isConnected: boolean;
+  isHost: boolean;
+  roomCode: string | null;
+  joinUrl: string | null;
+}
+
+// ============================================================================
 // COMPONENTS
 // ============================================================================
 
-// Virtual Joystick Component
 function VirtualJoystick({ onMove, size = 120 }: { onMove: (pos: { x: number; y: number }) => void; size?: number }) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isActive, setIsActive] = useState(false);
@@ -76,7 +86,7 @@ function VirtualJoystick({ onMove, size = 120 }: { onMove: (pos: { x: number; y:
       }}
     >
       <div
-        className="rounded-full transition-transform"
+        className="rounded-full"
         style={{
           width: 50,
           height: 50,
@@ -92,7 +102,6 @@ function VirtualJoystick({ onMove, size = 120 }: { onMove: (pos: { x: number; y:
   );
 }
 
-// Action Button Component
 function ActionButton({ label, color, onPress, size = 70 }: { label: string; color: string; onPress: () => void; size?: number }) {
   const [isPressed, setIsPressed] = useState(false);
   
@@ -113,7 +122,7 @@ function ActionButton({ label, color, onPress, size = 70 }: { label: string; col
       onTouchEnd={handleRelease}
       onMouseDown={handlePress}
       onMouseUp={handleRelease}
-      className="rounded-full flex items-center justify-center font-pixel cursor-pointer select-none"
+      className="rounded-full flex items-center justify-center cursor-pointer select-none"
       style={{
         width: size,
         height: size,
@@ -124,6 +133,7 @@ function ActionButton({ label, color, onPress, size = 70 }: { label: string; col
         color: '#fff',
         fontSize: 24,
         fontWeight: 'bold',
+        fontFamily: '"Press Start 2P", monospace',
         textShadow: '2px 2px 0 rgba(0,0,0,0.5)',
         transform: isPressed ? 'scale(0.95)' : 'scale(1)',
         boxShadow: isPressed ? `0 0 30px ${color}88` : `0 4px 0 ${color}66`,
@@ -136,7 +146,6 @@ function ActionButton({ label, color, onPress, size = 70 }: { label: string; col
   );
 }
 
-// Inventory Slot Component
 function InventorySlot({ item, isSelected, onClick }: { item: any; isSelected: boolean; onClick: () => void }) {
   return (
     <div
@@ -161,7 +170,6 @@ function InventorySlot({ item, isSelected, onClick }: { item: any; isSelected: b
   );
 }
 
-// Health Bar Component
 function HealthBar({ health, maxHealth }: { health: number; maxHealth: number }) {
   return (
     <div 
@@ -182,18 +190,18 @@ function HealthBar({ health, maxHealth }: { health: number; maxHealth: number })
   );
 }
 
-// Kill Feed Component
 function KillFeed({ kills }: { kills: KillFeedEntry[] }) {
   return (
     <div className="absolute top-16 right-5 flex flex-col gap-1">
       {kills.slice(-5).map((kill, i) => (
         <div
           key={kill.id}
-          className="font-pixel text-xs px-3 py-1.5 rounded animate-slideIn"
+          className="text-xs px-3 py-1.5 rounded animate-slideIn"
           style={{
             background: 'rgba(0,0,0,0.8)',
             color: COLORS.text,
             opacity: 1 - i * 0.15,
+            fontFamily: '"Press Start 2P", monospace',
           }}
         >
           <span style={{ color: kill.killerColor }}>{kill.killer}</span>
@@ -205,15 +213,15 @@ function KillFeed({ kills }: { kills: KillFeedEntry[] }) {
   );
 }
 
-// Countdown Overlay
 function CountdownOverlay({ count }: { count: number }) {
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-50">
       <div 
-        className="font-pixel text-9xl animate-pulse"
+        className="text-8xl animate-pulse"
         style={{
           color: COLORS.accent,
           textShadow: `0 0 40px ${COLORS.accent}, 0 0 80px ${COLORS.accent}`,
+          fontFamily: '"Press Start 2P", monospace',
         }}
       >
         {count > 0 ? count : 'GO!'}
@@ -222,7 +230,6 @@ function CountdownOverlay({ count }: { count: number }) {
   );
 }
 
-// Settings Modal
 function SettingsModal({ 
   isOpen, 
   onClose, 
@@ -241,8 +248,8 @@ function SettingsModal({
   return (
     <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
       <div 
-        className="rounded-xl p-8 min-w-[300px] font-pixel"
-        style={{ background: COLORS.bgGradient, border: `2px solid ${COLORS.primary}` }}
+        className="rounded-xl p-8 min-w-[300px]"
+        style={{ background: COLORS.bgGradient, border: `2px solid ${COLORS.primary}`, fontFamily: '"Press Start 2P", monospace' }}
       >
         <h2 className="text-center text-sm mb-6" style={{ color: COLORS.accent }}>
           ⚙️ {t.settings}
@@ -301,8 +308,8 @@ function SettingsModal({
           <select
             value={settings.language}
             onChange={(e) => onSettingsChange({ ...settings, language: e.target.value as 'en' | 'id' })}
-            className="w-full p-2 rounded font-pixel text-xs"
-            style={{ background: COLORS.bg, color: COLORS.text, border: `1px solid ${COLORS.secondary}` }}
+            className="w-full p-2 rounded text-xs"
+            style={{ background: COLORS.bg, color: COLORS.text, border: `1px solid ${COLORS.secondary}`, fontFamily: '"Press Start 2P", monospace' }}
           >
             <option value="en">ENGLISH</option>
             <option value="id">BAHASA INDONESIA</option>
@@ -314,8 +321,8 @@ function SettingsModal({
             audioManager.playSound('menuConfirm');
             onClose();
           }}
-          className="w-full py-3 rounded font-pixel text-xs text-white cursor-pointer"
-          style={{ background: COLORS.primary }}
+          className="w-full py-3 rounded text-xs text-white cursor-pointer"
+          style={{ background: COLORS.primary, fontFamily: '"Press Start 2P", monospace' }}
         >
           {t.close}
         </button>
@@ -324,7 +331,6 @@ function SettingsModal({
   );
 }
 
-// Game Canvas Component
 function GameCanvas({ 
   world, 
   players, 
@@ -357,11 +363,9 @@ function GameCanvas({
     const shakeX = screenShake?.offsetX || 0;
     const shakeY = screenShake?.offsetY || 0;
     
-    // Clear
     ctx.fillStyle = COLORS.sky;
     ctx.fillRect(0, 0, width, height);
     
-    // Draw starfield
     ctx.fillStyle = '#ffffff';
     for (let i = 0; i < 100; i++) {
       const x = (i * 137 + camera.x * 0.1) % width;
@@ -372,7 +376,6 @@ function GameCanvas({
     }
     ctx.globalAlpha = 1;
     
-    // Calculate visible tiles
     const startX = Math.max(0, Math.floor(camera.x / TILE_SIZE) - 1);
     const endX = Math.min(WORLD_WIDTH, Math.ceil((camera.x + width / camera.zoom) / TILE_SIZE) + 1);
     const startY = Math.max(0, Math.floor(camera.y / TILE_SIZE) - 1);
@@ -383,7 +386,6 @@ function GameCanvas({
     ctx.scale(camera.zoom, camera.zoom);
     ctx.translate(-camera.x, -camera.y);
     
-    // Draw world tiles
     for (let y = startY; y < endY; y++) {
       for (let x = startX; x < endX; x++) {
         const block = world[y]?.[x];
@@ -413,7 +415,6 @@ function GameCanvas({
       }
     }
     
-    // Draw players
     players.forEach(player => {
       if (player.isDead) return;
       if (player.invulnerable > 0 && Math.floor(player.invulnerable / 3) % 2 === 0) return;
@@ -439,7 +440,6 @@ function GameCanvas({
       
       ctx.restore();
       
-      // Name tag
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
       ctx.fillRect(player.x - 15, player.y - 14, 46, 10);
       ctx.fillStyle = player.color;
@@ -447,17 +447,14 @@ function GameCanvas({
       ctx.textAlign = 'center';
       ctx.fillText(player.name.substring(0, 6), player.x + 8, player.y - 6);
       
-      // Health bar
       ctx.fillStyle = '#300';
       ctx.fillRect(player.x - 7, player.y - 22, 30, 4);
       ctx.fillStyle = player.health > 30 ? '#0f0' : '#f00';
       ctx.fillRect(player.x - 7, player.y - 22, (player.health / player.maxHealth) * 30, 4);
     });
     
-    // Draw particles
     particles?.draw(ctx, { x: 0, y: 0, zoom: 1 });
     
-    // Draw zone fog
     if (zone.radius < WORLD_WIDTH * TILE_SIZE / 2) {
       ctx.fillStyle = COLORS.fog;
       ctx.fillRect(0, 0, zone.x - zone.radius, WORLD_HEIGHT * TILE_SIZE);
@@ -494,6 +491,14 @@ export default function PixelClashGame() {
   const [audioInitialized, setAudioInitialized] = useState(false);
   const [killFeed, setKillFeed] = useState<KillFeedEntry[]>([]);
   
+  // Multiplayer state
+  const [multiplayer, setMultiplayer] = useState<MultiplayerState>({
+    isConnected: false,
+    isHost: false,
+    roomCode: null,
+    joinUrl: null,
+  });
+  
   const [settings, setSettings] = useState<GameSettings>({
     masterVolume: 70,
     musicVolume: 30,
@@ -520,12 +525,40 @@ export default function PixelClashGame() {
   
   const t = translations[settings.language];
   
+  // Check for Playroom Game ID
+  const hasPlayroomId = typeof process !== 'undefined' && !!process.env.NEXT_PUBLIC_PLAYROOM_GAME_ID;
+  
   const initAudio = useCallback(async () => {
     if (!audioInitialized) {
       await audioManager.init();
       setAudioInitialized(true);
     }
   }, [audioInitialized]);
+  
+  // Initialize Playroom (if configured)
+  useEffect(() => {
+    const initPlayroom = async () => {
+      if (!hasPlayroomId) return;
+      
+      try {
+        const { initMultiplayer, checkIsHost, getJoinUrl } = await import('@/lib/multiplayer');
+        const roomCode = await initMultiplayer();
+        
+        if (roomCode) {
+          setMultiplayer({
+            isConnected: true,
+            isHost: checkIsHost(),
+            roomCode,
+            joinUrl: getJoinUrl(),
+          });
+        }
+      } catch (error) {
+        console.warn('Playroom initialization failed:', error);
+      }
+    };
+    
+    initPlayroom();
+  }, [hasPlayroomId]);
   
   const addBotPlayer = useCallback(() => {
     const botNames = ['PixelNinja', 'BlockMstr', 'ZoneRun', 'LootKing', 'Crusher', 'Fighter'];
@@ -757,19 +790,29 @@ export default function PixelClashGame() {
   const alivePlayers = gameState.players.filter(p => !p.isDead);
   const winner = gameState.phase === 'gameover' && alivePlayers.length === 1 ? alivePlayers[0] : null;
 
+  // Get join URL (Playroom or local)
+  const joinUrl = multiplayer.joinUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/join/${gameCode}`;
+
   // MENU VIEW
   if (viewMode === 'menu') {
     return (
       <div 
         onClick={initAudio}
-        className="w-full min-h-screen flex flex-col items-center justify-center p-5 gap-8 font-pixel"
-        style={{ background: `linear-gradient(180deg, ${COLORS.bg} 0%, ${COLORS.bgGradient} 100%)` }}
+        className="w-full min-h-screen flex flex-col items-center justify-center p-5 gap-8"
+        style={{ background: `linear-gradient(180deg, ${COLORS.bg} 0%, ${COLORS.bgGradient} 100%)`, fontFamily: '"Press Start 2P", monospace' }}
       >
         <button
           onClick={(e) => { e.stopPropagation(); initAudio(); audioManager.playSound('menuSelect'); setShowSettings(true); }}
           className="absolute top-5 right-5 px-3 py-2 rounded-lg text-xs cursor-pointer"
           style={{ background: 'rgba(255,255,255,0.1)', border: `1px solid ${COLORS.textDim}`, color: COLORS.text }}
         >⚙️</button>
+        
+        {/* Multiplayer Status Badge */}
+        {hasPlayroomId && (
+          <div className="absolute top-5 left-5 px-3 py-2 rounded-lg text-xs" style={{ background: multiplayer.isConnected ? 'rgba(0,255,204,0.2)' : 'rgba(255,102,0,0.2)', border: `1px solid ${multiplayer.isConnected ? COLORS.secondary : COLORS.warning}`, color: multiplayer.isConnected ? COLORS.secondary : COLORS.warning }}>
+            {multiplayer.isConnected ? '🌐 ONLINE' : '⏳ CONNECTING...'}
+          </div>
+        )}
         
         <div className="text-center">
           <h1 className="text-3xl md:text-5xl m-0" style={{ color: COLORS.primary, textShadow: `0 0 20px ${COLORS.primary}, 4px 4px 0 ${COLORS.warning}` }}>{t.title}</h1>
@@ -797,7 +840,7 @@ export default function PixelClashGame() {
               onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
               maxLength={8}
               className="flex-1 px-4 py-3 rounded-lg text-xs outline-none"
-              style={{ background: 'rgba(255,255,255,0.1)', border: `2px solid ${COLORS.secondary}40`, color: COLORS.text }}
+              style={{ background: 'rgba(255,255,255,0.1)', border: `2px solid ${COLORS.secondary}40`, color: COLORS.text, fontFamily: '"Press Start 2P", monospace' }}
             />
             <button
               onClick={joinAsPlayer}
@@ -825,7 +868,7 @@ export default function PixelClashGame() {
   // HOST VIEW
   if (viewMode === 'host') {
     return (
-      <div className="w-full h-screen flex flex-col font-pixel overflow-hidden" style={{ background: `linear-gradient(180deg, ${COLORS.bg} 0%, ${COLORS.bgGradient} 100%)` }}>
+      <div className="w-full h-screen flex flex-col overflow-hidden" style={{ background: `linear-gradient(180deg, ${COLORS.bg} 0%, ${COLORS.bgGradient} 100%)`, fontFamily: '"Press Start 2P", monospace' }}>
         {/* Header */}
         <div className="flex justify-between items-center px-5 py-3" style={{ background: 'rgba(0,0,0,0.5)', borderBottom: `2px solid ${COLORS.primary}` }}>
           <div className="flex items-center gap-5">
@@ -833,6 +876,11 @@ export default function PixelClashGame() {
             <div className="text-xs px-3 py-1 rounded" style={{ color: COLORS.secondary, background: 'rgba(0,255,204,0.1)', border: `1px solid ${COLORS.secondary}` }}>
               {gameState.phase === 'lobby' ? `⏳ ${t.lobby}` : gameState.phase === 'playing' || gameState.phase === 'countdown' ? `🎮 ${t.battle}` : `🏆 ${t.gameOver}`}
             </div>
+            {multiplayer.isConnected && (
+              <div className="text-xs px-3 py-1 rounded" style={{ color: COLORS.secondary, background: 'rgba(0,255,204,0.1)', border: `1px solid ${COLORS.secondary}` }}>
+                🌐 ROOM: {multiplayer.roomCode}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-8">
             <span className="text-xs" style={{ color: COLORS.text }}>{t.alive}: <span style={{ color: COLORS.secondary }}>{alivePlayers.length}</span>/{gameState.players.length}</span>
@@ -848,9 +896,11 @@ export default function PixelClashGame() {
                 <div className="w-full h-full flex flex-col items-center justify-center gap-8" style={{ background: 'rgba(0,0,0,0.8)' }}>
                   <h2 className="text-2xl" style={{ color: COLORS.accent, textShadow: `0 0 20px ${COLORS.accent}` }}>{t.scanToJoin}</h2>
                   <div className="p-4 bg-white rounded-lg">
-                    <QRCodeSVG value={`https://pixel-clash.vercel.app/join/${gameCode}`} size={180} />
+                    <QRCodeSVG value={joinUrl} size={180} />
                   </div>
-                  <p className="text-xs" style={{ color: COLORS.textDim }}>{t.gameCode}: <span style={{ color: COLORS.secondary }}>{gameCode}</span></p>
+                  <p className="text-xs" style={{ color: COLORS.textDim }}>
+                    {multiplayer.isConnected ? `ROOM: ${multiplayer.roomCode}` : `${t.gameCode}: ${gameCode}`}
+                  </p>
                   <p className="text-sm" style={{ color: COLORS.text }}>{gameState.players.length} {t.playersWaiting}</p>
                   {gameState.players.length >= 2 && (
                     <button onClick={startGame} className="px-10 py-4 text-sm rounded-lg text-white cursor-pointer hover:scale-105 transition-transform" style={{ background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.warning} 100%)`, boxShadow: `0 0 30px ${COLORS.primary}60` }}>{t.startBattle}</button>
@@ -897,15 +947,15 @@ export default function PixelClashGame() {
     const playerCamera = currentPlayer ? { x: currentPlayer.x - 200, y: currentPlayer.y - 150, zoom: 2 } : { x: 0, y: 0, zoom: 2 };
     
     if (!currentPlayer) {
-      return <div className="w-full h-screen flex items-center justify-center font-pixel" style={{ background: COLORS.bg }}><div className="text-center" style={{ color: COLORS.text }}><div className="text-2xl mb-5">⏳</div>{t.connecting}</div></div>;
+      return <div className="w-full h-screen flex items-center justify-center" style={{ background: COLORS.bg, fontFamily: '"Press Start 2P", monospace' }}><div className="text-center" style={{ color: COLORS.text }}><div className="text-2xl mb-5">⏳</div>{t.connecting}</div></div>;
     }
     
     if (currentPlayer.isDead) {
-      return <div className="w-full h-screen flex flex-col items-center justify-center gap-5 font-pixel" style={{ background: COLORS.bg }}><div className="text-5xl">💀</div><div className="text-base" style={{ color: COLORS.primary }}>{t.eliminated}</div><div className="text-xs" style={{ color: COLORS.textDim }}>{t.youPlaced} #{alivePlayers.length + 1}</div><div className="text-xs" style={{ color: COLORS.accent }}>{currentPlayer.kills} {t.kills}</div></div>;
+      return <div className="w-full h-screen flex flex-col items-center justify-center gap-5" style={{ background: COLORS.bg, fontFamily: '"Press Start 2P", monospace' }}><div className="text-5xl">💀</div><div className="text-base" style={{ color: COLORS.primary }}>{t.eliminated}</div><div className="text-xs" style={{ color: COLORS.textDim }}>{t.youPlaced} #{alivePlayers.length + 1}</div><div className="text-xs" style={{ color: COLORS.accent }}>{currentPlayer.kills} {t.kills}</div></div>;
     }
     
     return (
-      <div className="w-full h-screen flex flex-col font-pixel overflow-hidden select-none" style={{ background: COLORS.bg, touchAction: 'none' }}>
+      <div className="w-full h-screen flex flex-col overflow-hidden select-none" style={{ background: COLORS.bg, touchAction: 'none', fontFamily: '"Press Start 2P", monospace' }}>
         <div className="flex-1 relative" style={{ borderBottom: `2px solid ${COLORS.primary}40` }}>
           <GameCanvas world={gameState.world} players={gameState.players} zone={gameState.zone} camera={playerCamera} isHost={false} />
           <div className="absolute top-2 left-2 right-2 flex justify-between items-start">
