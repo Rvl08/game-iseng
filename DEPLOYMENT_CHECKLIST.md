@@ -231,9 +231,22 @@ npm run start:server     # Start Colyseus server (used by Railway)
 5. View logs
 
 **Common issues:**
-- Build failed → Check if `npm install --legacy-peer-deps` ran
-- Port error → Railway sets PORT env var automatically
-- Missing dependencies → Verify package.json has all Colyseus packages
+
+1. **"undefined variable 'nodejs-20_x'" error:**
+   - ✅ FIXED! Make sure `nixpacks.toml` uses `nodejs_20` (not `nodejs-20_x`)
+   - Railway should automatically redeploy after you push the fix
+
+2. **Build failed:**
+   - Check if `npm install --legacy-peer-deps` ran in build logs
+   - Verify all dependencies in package.json
+
+3. **Port error:**
+   - Railway sets PORT env var automatically
+   - Server should use `process.env.PORT || 2567`
+
+4. **Missing dependencies:**
+   - Verify package.json has all Colyseus packages
+   - Check that `@colyseus/core` and `@colyseus/ws-transport` are installed
 
 ### Client Can't Connect
 
