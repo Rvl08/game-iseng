@@ -176,7 +176,8 @@ vercel --prod
 - ✅ `tsconfig.json` - Added decorator support
 - ✅ `tsconfig.server.json` - Fixed rootDir for correct build output
 - ✅ `Procfile` - Updated to use dist/index.js
-- ✅ `.npmrc` - Added legacy-peer-deps for Vercel compatibility
+- ✅ `vercel.json` - Updated install and build commands with legacy-peer-deps
+- ✅ `.npmrc` - Added legacy-peer-deps as backup
 - ✅ `.env.local` - Updated with Colyseus URL
 
 ### Backup Files:
@@ -265,10 +266,16 @@ npm error ERESOLVE could not resolve
 npm error Conflicting peer dependency: eslint@9.39.2
 ```
 
+**Root Cause:**
+- `vercel.json` had `"installCommand": "npm install"` which overrides `.npmrc`
+- This caused peer dependency conflicts with eslint versions
+
 **Fix:**
-- ✅ FIXED! Added `.npmrc` file with `legacy-peer-deps=true`
-- Vercel will automatically use this configuration on next build
-- Push the `.npmrc` file and Vercel will redeploy successfully
+- ✅ FIXED! Updated `vercel.json`:
+  - Changed `installCommand` to `"npm install --legacy-peer-deps"`
+  - Changed `buildCommand` to `"next build"` (no server build needed on Vercel)
+- Also added `.npmrc` with `legacy-peer-deps=true` as backup
+- Vercel will automatically redeploy with the new configuration
 
 ### Client Can't Connect
 
