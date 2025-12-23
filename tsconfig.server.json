@@ -4,9 +4,11 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "outDir": "./dist",
-    "rootDir": "./",
+    "rootDir": "./server",
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "noEmit": false,
+    "declaration": false
   },
   "include": ["server/**/*"],
   "exclude": ["node_modules", ".next", "out", "dist"]
