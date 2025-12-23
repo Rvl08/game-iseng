@@ -4,11 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "dev:server": "ts-node --project tsconfig.server.json server/index.ts",
+    "build": "next build && tsc --project tsconfig.server.json",
     "start": "next start",
+    "start:server": "node dist/server/index.js",
     "lint": "next lint"
   },
   "dependencies": {
+    "@colyseus/core": "^0.16.24",
+    "@colyseus/schema": "^3.0.75",
+    "@colyseus/ws-transport": "^0.16.5",
+    "colyseus": "^0.16.5",
+    "colyseus.js": "^0.16.22",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
     "next": "^14.2.35",
     "playroomkit": "^0.0.82",
     "qrcode.react": "^3.1.0",
@@ -16,6 +25,8 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
@@ -24,6 +35,7 @@
     "eslint-config-next": "^16.1.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

@@ -2,21 +2,16 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Room } from "colyseus.js";
+import { isHost, isStreamScreen, myPlayer, onPlayerJoin, PlayerState, RPC } from "playroomkit";
 import { audioManager } from "@/lib/audio";
 import { ParticleSystem, ScreenShake } from "@/lib/particles";
 import {
-  initializeColyseus,
-  joinOrCreateRoom,
-  getCurrentRoom,
-  sendMove,
-  sendJump,
-  sendAction,
-  sendSelectSlot,
-  sendStartGame,
-  schemaToPlayer,
-  leaveRoom,
-} from "@/lib/colyseus-client";
+  initializePlayroom,
+  playerStateToPlayer,
+  updatePlayerState,
+  PLAYROOM_STATES,
+  PLAYER_STATES,
+} from "@/lib/playroom";
 import {
   TILE_SIZE,
   WORLD_WIDTH,
@@ -39,8 +34,11 @@ import {
   type KillFeedEntry,
 } from "@/lib/constants";
 
+// Read remaining component code from original file
+// Import all helper components that were in the original file
+
 // ============================================================================
-// COMPONENTS (Keep all existing components unchanged)
+// COMPONENTS
 // ============================================================================
 
 function VirtualJoystick({ onMove, size = 120 }: { onMove: (pos: { x: number; y: number }) => void; size?: number }) {
@@ -176,6 +174,7 @@ function ActionButton({
   );
 }
 
+// Game Canvas Component
 function GameCanvas({
   world,
   players,
@@ -215,9 +214,11 @@ function GameCanvas({
     ctx.scale(camera.zoom, camera.zoom);
     ctx.translate(-camera.x, -camera.y);
 
+    // Background
     ctx.fillStyle = COLORS.sky;
     ctx.fillRect(camera.x, camera.y, width / camera.zoom, height / camera.zoom);
 
+    // World
     for (let y = 0; y < WORLD_HEIGHT; y++) {
       for (let x = 0; x < WORLD_WIDTH; x++) {
         const block = world[y][x];
@@ -253,12 +254,14 @@ function GameCanvas({
       }
     }
 
+    // Zone
     ctx.strokeStyle = COLORS.fog;
     ctx.lineWidth = 40;
     ctx.beginPath();
     ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
     ctx.stroke();
 
+    // Players
     players.forEach((player) => {
       if (player.isDead) return;
 
@@ -283,6 +286,7 @@ function GameCanvas({
 
       ctx.restore();
 
+      // Name and health
       ctx.fillStyle = player.color;
       ctx.font = "8px monospace";
       ctx.textAlign = "center";
@@ -301,6 +305,7 @@ function GameCanvas({
       );
     });
 
+    // Particles
     if (particles) {
       particles.particles.forEach((particle) => {
         ctx.fillStyle = particle.color;
@@ -324,6 +329,7 @@ function GameCanvas({
   );
 }
 
+// Other helper components
 function HealthBar({ health, maxHealth }: { health: number; maxHealth: number }) {
   return (
     <div
@@ -508,17 +514,17 @@ function SettingsModal({
 }
 
 // ============================================================================
-// MAIN COMPONENT WITH COLYSEUS INTEGRATION
+// MAIN COMPONENT WITH PLAYROOM INTEGRATION
 // ============================================================================
 
 export default function PixelClashGame() {
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [room, setRoom] = useState<Room | null>(null);
-  const [playerName, setPlayerName] = useState("");
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
+  const [currentPlayerState, setCurrentPlayerState] = useState<PlayerState | null>(null);
+  const [allPlayers, setAllPlayers] = useState<PlayerState[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [audioInitialized, setAudioInitialized] = useState(false);
   const [killFeed, setKillFeed] = useState<KillFeedEntry[]>([]);
-  const [isHost, setIsHost] = useState(false);
 
   const [settings, setSettings] = useState<GameSettings>({
     masterVolume: 70,
@@ -529,6 +535,7 @@ export default function PixelClashGame() {
 
   const particlesRef = useRef(new ParticleSystem());
   const screenShakeRef = useRef(new ScreenShake());
+  const gameStateRef = useRef<GameState | null>(null);
 
   const [gameState, setGameState] = useState<GameState>(() => ({
     phase: "lobby",
@@ -546,6 +553,70 @@ export default function PixelClashGame() {
 
   const t = translations[settings.language];
 
+  // Initialize Playroom
+  useEffect(() => {
+    async function init() {
+      const success = await initializePlayroom();
+      if (success) {
+        setIsInitialized(true);
+        const player = myPlayer();
+        setCurrentPlayerState(player);
+        setIsConnecting(false);
+      } else {
+        console.error("Failed to initialize Playroom");
+        setIsConnecting(false);
+      }
+    }
+    init();
+  }, []);
+
+  // Setup player join/leave handlers
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const unsubscribe = onPlayerJoin((playerState) => {
+      console.log("Player joined:", playerState.id);
+
+      setAllPlayers((prev) => {
+        const exists = prev.find((p) => p.id === playerState.id);
+        if (exists) return prev;
+        return [...prev, playerState];
+      });
+
+      // Initialize player position if host
+      if (isHost()) {
+        const colorIndex = allPlayers.length % PLAYER_COLORS.length;
+        const spawnX = 100 + Math.random() * (WORLD_WIDTH * TILE_SIZE - 200);
+        const spawnY = 50;
+
+        updatePlayerState(playerState, {
+          color: PLAYER_COLORS[colorIndex],
+          x: spawnX,
+          y: spawnY,
+          health: 100,
+        });
+      }
+
+      // Handle player leave
+      playerState.onQuit(() => {
+        console.log("Player left:", playerState.id);
+        setAllPlayers((prev) => prev.filter((p) => p.id !== playerState.id));
+      });
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [isInitialized, allPlayers.length]);
+
+  // Sync game state with Playroom
+  useEffect(() => {
+    if (!isInitialized || !currentPlayerState) return;
+
+    const players = allPlayers.map(playerStateToPlayer);
+    setGameState((prev) => ({ ...prev, players }));
+  }, [isInitialized, currentPlayerState, allPlayers]);
+
   // Audio initialization
   const initAudio = useCallback(async () => {
     if (!audioInitialized) {
@@ -554,212 +625,208 @@ export default function PixelClashGame() {
     }
   }, [audioInitialized]);
 
-  // Join game room
-  const joinGame = useCallback(async () => {
-    if (!playerName.trim()) return;
-
-    await initAudio();
-    setIsConnecting(true);
-
-    const serverUrl = process.env.NEXT_PUBLIC_COLYSEUS_URL || "ws://localhost:2567";
-
-    try {
-      const success = await initializeColyseus(serverUrl);
-      if (!success) {
-        alert("Failed to connect to game server");
-        setIsConnecting(false);
-        return;
-      }
-
-      const gameRoom = await joinOrCreateRoom(playerName.trim());
-      if (!gameRoom) {
-        alert("Failed to join game room");
-        setIsConnecting(false);
-        return;
-      }
-
-      setRoom(gameRoom);
-
-      // Check if this is first player (host)
-      gameRoom.onMessage("*", (type, message) => {
-        console.log("Received:", type, message);
-      });
-
-      // Listen to state changes
-      gameRoom.state.onChange(() => {
-        const players: Player[] = [];
-        gameRoom.state.players.forEach((playerSchema: any) => {
-          players.push(schemaToPlayer(playerSchema));
-        });
-
-        setGameState((prev) => ({
-          ...prev,
-          phase: gameRoom.state.phase,
-          players,
-          zone: {
-            x: gameRoom.state.zone.x,
-            y: gameRoom.state.zone.y,
-            radius: gameRoom.state.zone.radius,
-          },
-          countdown: gameRoom.state.countdown || null,
-          world: generateWorld(gameRoom.state.worldSeed),
-        }));
-      });
-
-      // Determine if host (first player)
-      setTimeout(() => {
-        if (gameRoom.state.players.size === 1) {
-          setIsHost(true);
-        }
-      }, 100);
-
-      setIsConnecting(false);
-      audioManager.playSound("menuConfirm");
-    } catch (error) {
-      console.error("Error joining game:", error);
-      alert("Connection error: " + error);
-      setIsConnecting(false);
-    }
-  }, [playerName, initAudio]);
-
   // Handle player input
-  const handlePlayerInput = useCallback((input: { type: string; x?: number; y?: number; slot?: number }) => {
-    switch (input.type) {
-      case "move":
-        sendMove(input.x || 0, input.y || 0);
-        break;
-      case "jump":
-        sendJump();
-        audioManager.playSound("jump");
-        break;
-      case "action":
-        sendAction();
-        audioManager.playSound("attack");
-        break;
-      case "selectSlot":
-        sendSelectSlot(input.slot || 0);
-        audioManager.playSound("menuSelect");
-        break;
-    }
-  }, []);
+  const handlePlayerInput = useCallback(
+    (input: { type: string; x?: number; y?: number; slot?: number }) => {
+      if (!currentPlayerState) return;
+
+      const player = playerStateToPlayer(currentPlayerState);
+      const updates: Partial<Player> = {};
+
+      switch (input.type) {
+        case "move":
+          updates.vx = (input.x || 0) * MOVE_SPEED;
+          if (input.x && input.x !== 0) updates.facing = input.x > 0 ? 1 : -1;
+          break;
+        case "jump":
+          if (!player.isJumping) {
+            updates.vy = JUMP_FORCE;
+            updates.isJumping = true;
+            audioManager.playSound("jump");
+            particlesRef.current.jump(player.x, player.y);
+          }
+          break;
+        case "action":
+          updates.isAttacking = true;
+          audioManager.playSound("attack");
+          setTimeout(() => {
+            updatePlayerState(currentPlayerState, { isAttacking: false });
+          }, 200);
+          break;
+        case "selectSlot":
+          updates.selectedSlot = input.slot || 0;
+          audioManager.playSound("menuSelect");
+          break;
+      }
+
+      updatePlayerState(currentPlayerState, updates);
+    },
+    [currentPlayerState]
+  );
 
   // Start game (host only)
   const startGame = useCallback(async () => {
-    if (!isHost) return;
+    if (!isHost()) return;
 
     await initAudio();
     audioManager.playSound("menuConfirm");
-    sendStartGame();
-  }, [isHost, initAudio]);
 
-  // Cleanup on unmount
+    RPC.call("startGame", null, RPC.Mode.ALL);
+  }, [initAudio]);
+
+  // RPC handler for starting game
   useEffect(() => {
-    return () => {
-      leaveRoom();
-    };
-  }, []);
+    if (!isInitialized) return;
 
-  const currentPlayer = room ? gameState.players.find((p) => p.id === room.sessionId) : null;
-  const alivePlayers = gameState.players.filter((p) => !p.isDead);
-  const winner = gameState.phase === "gameover" && alivePlayers.length === 1 ? alivePlayers[0] : null;
+    RPC.register("startGame", async () => {
+      setGameState((prev) => ({ ...prev, phase: "countdown", countdown: 3 }));
 
-  // MENU VIEW (not connected yet)
-  if (!room) {
+      for (let i = 3; i >= 0; i--) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        audioManager.playSound(i > 0 ? "countdown" : "gameStart");
+        setGameState((prev) => ({ ...prev, countdown: i }));
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setGameState((prev) => ({ ...prev, phase: "playing", countdown: null }));
+      audioManager.startMusic("battle");
+    });
+  }, [isInitialized]);
+
+  // Game loop (host only)
+  useEffect(() => {
+    if (!isHost() || gameState.phase !== "playing") return;
+
+    const interval = setInterval(() => {
+      particlesRef.current.update();
+      screenShakeRef.current.update();
+
+      setGameState((prev) => {
+        let { players, world, zone } = prev;
+
+        // Update physics for all players
+        players = players.map((player) => {
+          if (player.isDead) return player;
+
+          let { x, y, vx, vy, isJumping, health, invulnerable } = player;
+
+          vy += GRAVITY;
+          x += vx;
+          y += vy;
+
+          // Collision detection
+          const collisionPoints = [
+            { x: Math.floor(x / TILE_SIZE), y: Math.floor((y + 16) / TILE_SIZE) },
+            { x: Math.floor((x + 15) / TILE_SIZE), y: Math.floor((y + 16) / TILE_SIZE) },
+          ];
+
+          let onGround = false;
+          for (const point of collisionPoints) {
+            if (point.y >= 0 && point.y < WORLD_HEIGHT && point.x >= 0 && point.x < WORLD_WIDTH) {
+              if (world[point.y][point.x] !== 0) {
+                y = point.y * TILE_SIZE - 16;
+                vy = 0;
+                onGround = true;
+                isJumping = false;
+              }
+            }
+          }
+
+          // Bounds check
+          x = Math.max(0, Math.min(WORLD_WIDTH * TILE_SIZE - 16, x));
+          y = Math.max(0, y);
+
+          // Zone damage
+          const distToZone = Math.sqrt((x - zone.x) ** 2 + (y - zone.y) ** 2);
+          if (distToZone > zone.radius && invulnerable <= 0) {
+            health -= 2;
+            if (health <= 0) {
+              return { ...player, isDead: true, health: 0 };
+            }
+          }
+
+          if (invulnerable > 0) invulnerable--;
+
+          // Find corresponding PlayerState and update
+          const playerState = allPlayers.find((p) => p.id === player.id);
+          if (playerState) {
+            updatePlayerState(playerState, { x, y, vx, vy, isJumping, health, invulnerable });
+          }
+
+          return { ...player, x, y, vx, vy, isJumping, health, invulnerable };
+        });
+
+        // Shrink zone
+        const newRadius = Math.max(100, zone.radius - 0.2);
+        zone = { ...zone, radius: newRadius };
+
+        // Camera
+        const alivePlayers = players.filter((p) => !p.isDead);
+        let camera = prev.camera;
+
+        if (alivePlayers.length > 0) {
+          const minX = Math.min(...alivePlayers.map((p) => p.x));
+          const maxX = Math.max(...alivePlayers.map((p) => p.x));
+          const minY = Math.min(...alivePlayers.map((p) => p.y));
+          const maxY = Math.max(...alivePlayers.map((p) => p.y));
+
+          const centerX = (minX + maxX) / 2;
+          const centerY = (minY + maxY) / 2;
+          const spanX = maxX - minX + 200;
+          const spanY = maxY - minY + 200;
+
+          const newZoom = Math.min(2, Math.max(0.5, Math.min(1200 / spanX, 700 / spanY)));
+
+          camera = {
+            x: centerX - 600 / newZoom,
+            y: centerY - 350 / newZoom,
+            zoom: camera.zoom * 0.95 + newZoom * 0.05,
+          };
+        }
+
+        // Check win condition
+        if (alivePlayers.length <= 1 && players.length > 1) {
+          audioManager.stopMusic();
+          if (alivePlayers.length === 1) audioManager.playSound("victory");
+          return { ...prev, players, zone, camera, phase: "gameover" };
+        }
+
+        return { ...prev, players, zone, camera };
+      });
+    }, 1000 / 60);
+
+    return () => clearInterval(interval);
+  }, [gameState.phase, allPlayers]);
+
+  // Loading state
+  if (isConnecting) {
     return (
-      <div
-        onClick={initAudio}
-        className="w-full min-h-screen flex flex-col items-center justify-center p-5 gap-8 font-pixel"
-        style={{ background: `linear-gradient(180deg, ${COLORS.bg} 0%, ${COLORS.bgGradient} 100%)` }}
-      >
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            initAudio();
-            audioManager.playSound("menuSelect");
-            setShowSettings(true);
-          }}
-          className="absolute top-5 right-5 px-3 py-2 rounded-lg text-xs cursor-pointer"
-          style={{ background: "rgba(255,255,255,0.1)", border: `1px solid ${COLORS.textDim}`, color: COLORS.text }}
-        >
-          ⚙️
-        </button>
-
-        <div className="text-center">
-          <h1
-            className="text-3xl md:text-5xl m-0"
-            style={{ color: COLORS.primary, textShadow: `0 0 20px ${COLORS.primary}, 4px 4px 0 ${COLORS.warning}` }}
-          >
-            {t.title}
-          </h1>
-          <p className="text-xs md:text-sm mt-2" style={{ color: COLORS.secondary, textShadow: `0 0 10px ${COLORS.secondary}` }}>
-            {t.subtitle}
-          </p>
-          <p className="text-xs mt-4" style={{ color: COLORS.accent }}>
-            Powered by Colyseus
-          </p>
+      <div className="w-full h-screen flex items-center justify-center font-pixel" style={{ background: COLORS.bg }}>
+        <div className="text-center" style={{ color: COLORS.text }}>
+          <div className="text-2xl mb-5">⏳</div>
+          {t.connecting}
         </div>
-
-        <div className="w-16 h-16 flex flex-wrap animate-float">
-          {SPRITE_PATTERNS.idle.map((row, y) =>
-            row.split("").map((char, x) => (
-              <div
-                key={`${x}-${y}`}
-                style={{
-                  width: 8,
-                  height: 8,
-                  background: char === "█" ? COLORS.primary : "transparent",
-                  boxShadow: char === "█" ? `0 0 4px ${COLORS.primary}` : "none",
-                }}
-              />
-            ))
-          )}
-        </div>
-
-        <div className="flex flex-col gap-4 w-full max-w-xs">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder={t.yourName}
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
-              maxLength={12}
-              className="flex-1 px-4 py-3 rounded-lg text-xs outline-none"
-              style={{
-                background: "rgba(255,255,255,0.1)",
-                border: `2px solid ${COLORS.secondary}40`,
-                color: COLORS.text,
-              }}
-              disabled={isConnecting}
-            />
-            <button
-              onClick={joinGame}
-              disabled={!playerName.trim() || isConnecting}
-              className="px-5 py-3 rounded-lg text-xs cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-              style={{
-                background: playerName.trim() && !isConnecting
-                  ? `linear-gradient(135deg, ${COLORS.secondary} 0%, #00aa88 100%)`
-                  : "rgba(255,255,255,0.1)",
-                color: playerName.trim() && !isConnecting ? "#000" : COLORS.textDim,
-              }}
-            >
-              {isConnecting ? "⏳" : "🎮"} {isConnecting ? "CONNECTING..." : t.join}
-            </button>
-          </div>
-        </div>
-
-        <div className="text-center text-xs leading-8" style={{ color: COLORS.textDim }}>
-          <p>{t.hostDisplay}</p>
-          <p>{t.joinPhone}</p>
-          <p>{t.lastStanding}</p>
-        </div>
-
-        <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} settings={settings} onSettingsChange={setSettings} />
       </div>
     );
   }
 
-  // HOST VIEW
-  if (isHost) {
+  if (!isInitialized || !currentPlayerState) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center font-pixel" style={{ background: COLORS.bg }}>
+        <div className="text-center" style={{ color: COLORS.text }}>
+          <div className="text-2xl mb-5">❌</div>
+          Failed to connect to Playroom
+        </div>
+      </div>
+    );
+  }
+
+  const currentPlayer = playerStateToPlayer(currentPlayerState);
+  const alivePlayers = gameState.players.filter((p) => !p.isDead);
+  const winner = gameState.phase === "gameover" && alivePlayers.length === 1 ? alivePlayers[0] : null;
+
+  // HOST/STREAM VIEW
+  if (isHost() || isStreamScreen()) {
     return (
       <div
         className="w-full h-screen flex flex-col font-pixel overflow-hidden"
@@ -787,20 +854,11 @@ export default function PixelClashGame() {
                 ? `🎮 ${t.battle}`
                 : `🏆 ${t.gameOver}`}
             </div>
-            <div
-              className="text-xs px-3 py-1 rounded"
-              style={{
-                color: COLORS.accent,
-                background: "rgba(255,204,0,0.1)",
-                border: `1px solid ${COLORS.accent}`,
-              }}
-            >
-              🔗 ROOM: {room?.roomId.slice(0, 6)}
-            </div>
           </div>
           <div className="flex items-center gap-8">
             <span className="text-xs" style={{ color: COLORS.text }}>
-              {t.alive}: <span style={{ color: COLORS.secondary }}>{alivePlayers.length}</span>/{gameState.players.length}
+              {t.alive}: <span style={{ color: COLORS.secondary }}>{alivePlayers.length}</span>/
+              {gameState.players.length}
             </span>
             {gameState.zone.radius < (WORLD_WIDTH * TILE_SIZE) / 2 && (
               <span className="text-xs animate-pulse" style={{ color: COLORS.warning }}>
@@ -825,7 +883,7 @@ export default function PixelClashGame() {
                     {t.scanToJoin}
                   </h2>
                   <div className="p-4 bg-white rounded-lg">
-                    <QRCodeSVG value={typeof window !== "undefined" ? window.location.href : ""} size={180} />
+                    <QRCodeSVG value={window.location.href} size={180} />
                   </div>
                   <p className="text-sm" style={{ color: COLORS.text }}>
                     {gameState.players.length} {t.playersWaiting}
@@ -922,17 +980,6 @@ export default function PixelClashGame() {
   }
 
   // PLAYER VIEW (Mobile Controller)
-  if (!currentPlayer) {
-    return (
-      <div className="w-full h-screen flex items-center justify-center font-pixel" style={{ background: COLORS.bg }}>
-        <div className="text-center" style={{ color: COLORS.text }}>
-          <div className="text-2xl mb-5">⏳</div>
-          {t.connecting}
-        </div>
-      </div>
-    );
-  }
-
   const playerCamera = { x: currentPlayer.x - 200, y: currentPlayer.y - 150, zoom: 2 };
 
   if (currentPlayer.isDead) {

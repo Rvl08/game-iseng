@@ -1,0 +1,163 @@
+═══════════════════════════════════════════════════════════════
+  🚀 PIXEL-CLASH + COLYSEUS - QUICK START GUIDE
+═══════════════════════════════════════════════════════════════
+
+✅ MIGRASI SELESAI! Server Colyseus + Railway config sudah ready!
+
+═══════════════════════════════════════════════════════════════
+  📝 KONFIGURASI MANUAL YANG HARUS ANDA LAKUKAN
+═══════════════════════════════════════════════════════════════
+
+1. UPDATE APP/PAGE.TSX (PENTING!)
+   ⚠️ File masih menggunakan Playroom, harus diganti ke Colyseus
+
+   Saya bisa bantu generate file baru, atau Anda bisa:
+   - Ganti import dari 'playroomkit' ke '@/lib/colyseus-client'
+   - Update connection logic
+
+2. DEPLOY SERVER KE RAILWAY
+   a. Create account: https://railway.app
+   b. Connect GitHub
+   c. Deploy pixel-clash-game repository
+   d. Generate domain
+   e. Copy WebSocket URL (wss://...)
+
+3. SET VERCEL ENVIRONMENT VARIABLE
+   a. Go to Vercel dashboard
+   b. Add env var:
+      KEY: NEXT_PUBLIC_COLYSEUS_URL
+      VALUE: wss://your-railway-url.railway.app
+   c. Redeploy
+
+═══════════════════════════════════════════════════════════════
+  🧪 TEST LOKAL
+═══════════════════════════════════════════════════════════════
+
+Terminal 1 - Server:
+    npm run dev:server
+
+Terminal 2 - Frontend:
+    npm run dev
+
+Browser:
+    http://localhost:3000
+
+═══════════════════════════════════════════════════════════════
+  📋 FILES CREATED
+═══════════════════════════════════════════════════════════════
+
+✅ server/index.ts              - Colyseus server entry
+✅ server/rooms/GameRoom.ts     - Game logic
+✅ server/schema/GameState.ts   - State synchronization
+✅ lib/colyseus-client.ts       - Client library
+✅ tsconfig.server.json         - Server TypeScript config
+✅ Procfile                     - Railway process
+✅ railway.json                 - Railway deployment config
+✅ nixpacks.toml                - Build configuration
+✅ COLYSEUS_SETUP.md            - Full documentation
+
+═══════════════════════════════════════════════════════════════
+  ⚙️ RAILWAY SETUP (Step-by-step)
+═══════════════════════════════════════════════════════════════
+
+1. Go to https://railway.app
+2. Click "Start a New Project"
+3. Select "Deploy from GitHub repo"
+4. Choose: pixel-clash-game
+5. Wait for auto-deploy (~2 min)
+6. Go to Settings → Networking
+7. Click "Generate Domain"
+8. Copy URL (e.g., pixel-clash-production.up.railway.app)
+9. Your WebSocket URL: wss://pixel-clash-production.up.railway.app
+
+═══════════════════════════════════════════════════════════════
+  🌐 VERCEL SETUP (Step-by-step)
+═══════════════════════════════════════════════════════════════
+
+1. Go to https://vercel.com/dashboard
+2. Open your project
+3. Settings → Environment Variables
+4. Click "Add New"
+5. Enter:
+   Name: NEXT_PUBLIC_COLYSEUS_URL
+   Value: wss://<your-railway-url>.railway.app
+6. Select all environments (Prod, Preview, Dev)
+7. Save
+8. Redeploy: vercel --prod
+
+═══════════════════════════════════════════════════════════════
+  💻 ENVIRONMENT VARIABLES
+═══════════════════════════════════════════════════════════════
+
+LOCAL (.env.local):
+    NEXT_PUBLIC_COLYSEUS_URL=ws://localhost:2567
+
+PRODUCTION (Vercel):
+    NEXT_PUBLIC_COLYSEUS_URL=wss://your-railway-url.railway.app
+
+RAILWAY (auto-configured):
+    PORT=2567
+
+═══════════════════════════════════════════════════════════════
+  🎮 HOW IT WORKS
+═══════════════════════════════════════════════════════════════
+
+1. SERVER (Railway):
+   - Runs Colyseus WebSocket server
+   - Handles game logic & physics
+   - Syncs state to all clients
+   - URL: wss://your-app.railway.app
+
+2. FRONTEND (Vercel):
+   - React app with game UI
+   - Connects to Colyseus server
+   - Sends player input
+   - Receives state updates
+   - URL: https://your-app.vercel.app
+
+3. MULTIPLAYER FLOW:
+   Host opens Vercel URL
+   → Frontend connects to Railway WebSocket
+   → Players join via QR code
+   → All connected to same Colyseus room
+   → Server syncs game state real-time
+
+═══════════════════════════════════════════════════════════════
+  ⚠️ IMPORTANT NOTES
+═══════════════════════════════════════════════════════════════
+
+1. Colyseus server MUST be deployed BEFORE frontend works
+2. WebSocket URL must start with wss:// for production
+3. Railway free tier = $5/month credit (enough for hobby)
+4. Test locally first before deploying!
+
+═══════════════════════════════════════════════════════════════
+  🐛 TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════
+
+SERVER NOT STARTING:
+    → Check Railway logs: railway logs
+    → Verify build completed successfully
+    → Check PORT is set to 2567
+
+CLIENT CAN'T CONNECT:
+    → Verify Railway server is running
+    → Check NEXT_PUBLIC_COLYSEUS_URL is correct
+    → Must use wss:// (not ws://) for production
+    → Check browser console for errors
+
+GAME NOT SYNCING:
+    → Both players connected to same room?
+    → Check server logs for errors
+    → Verify network tab shows WebSocket connected
+
+═══════════════════════════════════════════════════════════════
+  📖 FULL DOCUMENTATION
+═══════════════════════════════════════════════════════════════
+
+Read: COLYSEUS_SETUP.md (complete guide dengan screenshots virtual)
+
+═══════════════════════════════════════════════════════════════
+
+Next step: Mau saya buatkan app/page.tsx versi Colyseus sekarang?
+Ketik "yes" jika mau saya generate!
