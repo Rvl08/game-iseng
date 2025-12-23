@@ -236,15 +236,21 @@ npm run start:server     # Start Colyseus server (used by Railway)
    - ✅ FIXED! Make sure `nixpacks.toml` uses `nodejs_20` (not `nodejs-20_x`)
    - Railway should automatically redeploy after you push the fix
 
-2. **Build failed:**
+2. **"Cannot find module '/app/dist/server/index.js'" error:**
+   - ✅ FIXED! Updated build configuration to output to `dist/index.js`
+   - Make sure `tsconfig.server.json` has `rootDir: "./server"`
+   - Make sure `package.json` has `start:server: "node dist/index.js"`
+   - Railway should automatically redeploy after you push the fix
+
+3. **Build failed:**
    - Check if `npm install --legacy-peer-deps` ran in build logs
    - Verify all dependencies in package.json
 
-3. **Port error:**
+4. **Port error:**
    - Railway sets PORT env var automatically
    - Server should use `process.env.PORT || 2567`
 
-4. **Missing dependencies:**
+5. **Missing dependencies:**
    - Verify package.json has all Colyseus packages
    - Check that `@colyseus/core` and `@colyseus/ws-transport` are installed
 
