@@ -174,6 +174,9 @@ vercel --prod
 - ✅ `app/page.tsx` - Completely rewritten with Colyseus integration
 - ✅ `package.json` - Added Colyseus dependencies and server scripts
 - ✅ `tsconfig.json` - Added decorator support
+- ✅ `tsconfig.server.json` - Fixed rootDir for correct build output
+- ✅ `Procfile` - Updated to use dist/index.js
+- ✅ `.npmrc` - Added legacy-peer-deps for Vercel compatibility
 - ✅ `.env.local` - Updated with Colyseus URL
 
 ### Backup Files:
@@ -254,6 +257,19 @@ npm run start:server     # Start Colyseus server (used by Railway)
    - Verify package.json has all Colyseus packages
    - Check that `@colyseus/core` and `@colyseus/ws-transport` are installed
 
+### Vercel Build Fails with "ERESOLVE could not resolve"
+
+**Error:**
+```
+npm error ERESOLVE could not resolve
+npm error Conflicting peer dependency: eslint@9.39.2
+```
+
+**Fix:**
+- ✅ FIXED! Added `.npmrc` file with `legacy-peer-deps=true`
+- Vercel will automatically use this configuration on next build
+- Push the `.npmrc` file and Vercel will redeploy successfully
+
 ### Client Can't Connect
 
 **Checklist:**
@@ -280,7 +296,7 @@ npm run start:server     # Start Colyseus server (used by Railway)
 ### Railway Shows "Application Failed to Respond"
 
 **Fix:**
-1. Check that `Procfile` contains: `web: node dist/server/index.js`
+1. Check that `Procfile` contains: `web: node dist/index.js`
 2. Verify server is listening on `process.env.PORT`
 3. Check Railway logs for startup errors
 
