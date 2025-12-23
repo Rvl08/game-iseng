@@ -10,7 +10,8 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
-  webpack: (config, { isServer }) => {
+  swcMinify: false,
+  webpack: (config, { isServer, dev }) => {
     // Fix for Colyseus client - don't transpile ES6 classes
     if (!isServer) {
       config.resolve.fallback = {
@@ -19,11 +20,15 @@ const nextConfig = {
         net: false,
         tls: false,
       };
+
+      // Disable minification for production to preserve classes
+      if (!dev) {
+        config.optimization.minimize = false;
+      }
     }
 
     return config;
   },
-  transpilePackages: ['colyseus.js', '@colyseus/core'],
 }
 
 module.exports = nextConfig
