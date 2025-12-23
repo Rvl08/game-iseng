@@ -175,4 +175,8 @@ export class ScreenShake {
       this.intensity = 0;
     }
   }
+
+  getOffset(): { x: number; y: number } {
+    return { x: this.offsetX, y: this.offsetY };
+  }
 }

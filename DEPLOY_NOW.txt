@@ -1,0 +1,117 @@
+═══════════════════════════════════════════════════════════════
+  🚀 PIXEL-CLASH BATTLE ROYALE - DEPLOY COMMANDS
+═══════════════════════════════════════════════════════════════
+
+BUILD STATUS: ✅ SUCCESS
+FILES READY: ✅ ALL IMPLEMENTED
+INTEGRATION: ✅ PLAYROOM KIT CONNECTED
+
+═══════════════════════════════════════════════════════════════
+  📦 STEP 1: COMMIT & PUSH
+═══════════════════════════════════════════════════════════════
+
+Copy-paste these commands:
+
+git add .
+git commit -m "Integrate Playroom Kit for real multiplayer - Ready to deploy"
+git push origin main
+
+═══════════════════════════════════════════════════════════════
+  🌐 STEP 2: DEPLOY TO VERCEL
+═══════════════════════════════════════════════════════════════
+
+Option A - Via Vercel CLI (Fastest):
+----------------------------------------
+vercel login
+vercel --prod
+
+Option B - Via Vercel Dashboard:
+----------------------------------------
+1. Go to: https://vercel.com/new
+2. Import your GitHub repository
+3. Click "Deploy"
+
+═══════════════════════════════════════════════════════════════
+  ⚙️ STEP 3: SET ENVIRONMENT VARIABLE IN VERCEL
+═══════════════════════════════════════════════════════════════
+
+CRITICAL: You MUST add this environment variable!
+
+1. Go to Vercel Dashboard
+2. Open your project settings
+3. Go to: Settings → Environment Variables
+4. Click "Add New"
+5. Enter:
+   Name:  NEXT_PUBLIC_PLAYROOM_GAME_ID
+   Value: 7uODloeVbXcMw3V6vjjA
+6. Select: ✅ Production ✅ Preview ✅ Development
+7. Click "Save"
+8. Redeploy: vercel --prod
+
+═══════════════════════════════════════════════════════════════
+  🎮 STEP 4: UPDATE PLAYROOM CONFIGURATION
+═══════════════════════════════════════════════════════════════
+
+1. Go to: https://joinplayroom.com/developer
+2. Find game: "pixelclash" (Game ID: 7uODloeVbXcMw3V6vjjA)
+3. Update "Allowed Domains" with your Vercel URL:
+   - https://your-app-name.vercel.app
+   - https://*.vercel.app
+4. Save changes
+
+═══════════════════════════════════════════════════════════════
+  ✅ STEP 5: TEST YOUR GAME
+═══════════════════════════════════════════════════════════════
+
+HOST (PC/TV):
+- Open: https://your-app-name.vercel.app
+- Wait for QR code to appear
+- Keep browser tab open
+
+PLAYERS (Mobile):
+- Scan QR code with phone camera
+- Phone becomes game controller
+- Move with virtual joystick
+- Press A to jump, B to attack
+
+MINIMUM 2 PLAYERS REQUIRED TO START GAME!
+
+═══════════════════════════════════════════════════════════════
+  📚 DOCUMENTATION FILES
+═══════════════════════════════════════════════════════════════
+
+README FILES CREATED:
+✅ READY_TO_DEPLOY.md    - Full deployment guide
+✅ DEPLOYMENT.md         - Detailed instructions
+✅ CHANGES.md            - Summary of all changes
+
+BACKUP FILES:
+✅ app/page.tsx.backup   - Original game file (before refactor)
+
+═══════════════════════════════════════════════════════════════
+  🔧 TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════
+
+Issue: 404 Error
+Fix: Add NEXT_PUBLIC_PLAYROOM_GAME_ID in Vercel + Redeploy
+
+Issue: Players can't join
+Fix: Add Vercel URL to Playroom "Allowed Domains"
+
+Issue: Game doesn't sync
+Fix: Check browser console for Playroom connection errors
+
+═══════════════════════════════════════════════════════════════
+  🎯 QUICK START COMMANDS
+═══════════════════════════════════════════════════════════════
+
+# Complete deployment in 3 commands:
+git add . && git commit -m "Deploy Playroom integration" && git push
+vercel login
+vercel --prod
+
+# Then: Set env var in Vercel dashboard + Update Playroom domains
+
+═══════════════════════════════════════════════════════════════
+
+Ready? Let's deploy! 🚀

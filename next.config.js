@@ -1,11 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Enable static export for Vercel deployment
-  output: 'export',
-  trailingSlash: true,
   images: {
     unoptimized: true,
+  },
+  // Enable WebSocket and real-time connections for Playroom
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
   },
 }
 
