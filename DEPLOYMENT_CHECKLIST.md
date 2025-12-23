@@ -277,6 +277,25 @@ npm error Conflicting peer dependency: eslint@9.39.2
 - Also added `.npmrc` with `legacy-peer-deps=true` as backup
 - Vercel will automatically redeploy with the new configuration
 
+### "Class constructor Room cannot be invoked without 'new'" Error
+
+**Error in browser console:**
+```
+Failed to join room: MatchMakeError: Class constructor Room cannot be invoked without 'new'
+```
+
+**Root Cause:**
+- Next.js webpack transpiling Colyseus ES6 classes incorrectly
+- ES6 class constructors need proper handling
+
+**Fix:**
+- ✅ FIXED! Updated `next.config.js`:
+  - Added webpack config for browser fallbacks
+  - Added `transpilePackages: ['colyseus.js', '@colyseus/core']`
+  - This ensures proper ES6 class handling
+- Updated `tsconfig.server.json` target to ES2017
+- Vercel will automatically redeploy with the fix
+
 ### Client Can't Connect
 
 **Checklist:**
