@@ -4,7 +4,13 @@
       "Bash(npm run build:*)",
       "Bash(npm install:*)",
       "Bash(npm run dev:server:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git add:*)",
+      "Bash(git restore:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(rm:*)",
+      "Bash(npm run start:server:*)"
     ]
   }
 }
